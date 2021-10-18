@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: vsphere-preemption-prototype
+  name: vsphere-preemption-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vsphere-preemption-prototype
+  template:
+    metadata:
+      labels:
+        app: vsphere-preemption-prototype
+    spec:
+      containers:
+        - image: ko://github.com/embano1/vsphere-preemption/worker
+          name: worker
+          env:
+            - name: TEMPORAL_URL
+              value: "FILL-ME-IN"
+            - name: TEMPORAL_NAMESPACE
+              value: "FILL-ME-IN"
+            - name: TEMPORAL_TASKQUEUE
+              value: "FILL-ME-IN"
+            - name: VCENTER_INSECURE
+              value: "false"
+            - name: VCENTER_URL
+              value: "FILL-ME-IN"
+            - name: DEBUG
+              value: "true"
+            - name: VCENTER_SECRET_PATH
+              value: "/var/bindings/vsphere" # this is the default path
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: credentials
+              mountPath: /var/bindings/vsphere
+              readOnly: true
+      volumes:
+        - name: credentials
+          secret:
+            secretName: vsphere-credentials
