@@ -202,8 +202,16 @@ Download the `latest` deployment manifest (`release.yaml`) file from the Github
 and update the environment variables in `release.yaml` to match your setup. Then
 save the file under the same name (to follow along with the commands).
 
+#### Example Download with `curl`:
+
+```console
+curl -L -O https://github.com/embano1/vsphere-preemption/releases/latest/download/release.yaml
+```
+
+#### Environment Variables
+
 | Variable              | Description                                                                                                                                | Example                                                              | Required |
-|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|----------|
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- | -------- |
 | `TEMPORAL_URL`        | `IP/FQDN:<port>` of the Temporal Frontend Service*                                                                                         | `temporaltest-frontend.default.svc.cluster.local:7233`               | **yes**  |
 | `TEMPORAL_NAMESPACE`  | Temporal (not Kubernetes!) [namespace](https://docs.temporal.io/docs/server/namespaces/) to use*                                           | `vsphere-preemption`                                                 | **yes**  |
 | `TEMPORAL_TASKQUEUE`  | User-defined Temporal [task queue](https://docs.temporal.io/docs/concepts/task-queues) to send workflows to the worker (created on-demand) | `vsphere-preemption`                                                 | **yes**  |
@@ -220,6 +228,8 @@ maximum **10** VMs in a single workflow execution. Failed activities (steps) are
 retried up to **3** times with backoff logic. If another workflow run is
 executed within **1 minute** after the last run, it will be skipped to avoid too
 many preemption within a short window.
+
+#### Deploy to Kubernetes
 
 Now, deploy the `worker`:
 
