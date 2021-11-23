@@ -246,20 +246,21 @@ func (c *Client) AnnotateVms(ctx context.Context, refs []types.ManagedObjectRefe
 	logger.Debug("annotating preempted vms", "refs", refs)
 	lim := newLimiter(concurrentVCenterCalls) // limit concurrent vc calls
 	wg := sync.WaitGroup{}
-	for _, ref := range refs {
+	for i := range refs {
+		ref := refs[i]
 		lim.acquire()
 		wg.Add(1)
-		go func(r types.ManagedObjectReference) {
+		go func() {
 			defer func() {
 				lim.release()
 				wg.Done()
 			}()
 
-			err = om.Set(ctx, r, key, string(b))
+			err := om.Set(ctx, ref, key, string(b))
 			if err != nil {
-				logger.Warn("set custom field", "ref", r, "error", err)
+				logger.Warn("set custom field", "ref", ref, "error", err)
 			}
-		}(ref)
+		}()
 	}
 
 	logger.Debug("waiting for operations to finish")

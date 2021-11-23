@@ -6,7 +6,8 @@ require (
 	github.com/benbjohnson/clock v1.1.0
 	github.com/cloudevents/sdk-go/v2 v2.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/vmware/govmomi v0.26.1
+	github.com/stretchr/testify v1.7.0
+	github.com/vmware/govmomi v0.27.1
 	go.temporal.io/sdk v1.10.0
 	go.uber.org/zap v1.19.1
 	k8s.io/api v0.22.2
@@ -35,7 +36,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/twmb/murmur3 v1.1.6 // indirect
 	github.com/uber-go/tally v3.4.2+incompatible // indirect
 	go.temporal.io/api v1.5.0 // indirect
