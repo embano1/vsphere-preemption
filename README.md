@@ -120,6 +120,9 @@ trigger the workflow:
 
 ## Deployment
 
+💡 A detailed video walkthrough is available
+[here](https://www.youtube.com/watch?v=K22Jdiu1HiY) (Youtube).
+
 ### vCenter Settings
 
 When a workflow is triggered from an external actor, e.g. by using a function
