@@ -46,20 +46,20 @@ type WorkflowResponse struct {
 func PreemptVMsWorkflow(ctx workflow.Context) (WorkflowResponse, error) {
 	var (
 		lastRun time.Time
-		done    bool
 		res     WorkflowResponse
 	)
 
 	logger := workflow.GetLogger(ctx)
 	sigCh := workflow.GetSignalChannel(ctx, SignalChannel)
 
-	for {
+	for ctx.Err() == nil {
 		logger.Info("waiting for incoming signal", "channel", SignalChannel)
 		sel := workflow.NewSelector(ctx)
 
 		// context handling
 		sel.AddReceive(ctx.Done(), func(_ workflow.ReceiveChannel, _ bool) {
-			done = true
+			logger.Info("received cancellation signal")
+			logger.Info("stopping workflow")
 		})
 
 		// workflow handling
@@ -156,11 +156,6 @@ func PreemptVMsWorkflow(ctx workflow.Context) (WorkflowResponse, error) {
 
 		// blocks on workflow ctx and signal chan
 		sel.Select(ctx)
-		if done {
-			logger.Info("received cancellation signal")
-			logger.Info("stopping workflow")
-			break
-		}
 	}
 
 	return res, nil

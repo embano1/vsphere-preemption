@@ -19,15 +19,15 @@ spec:
           name: worker
           env:
             - name: TEMPORAL_URL
-              value: "FILL-ME-IN"
+              value: "FILL_ME_IN"
             - name: TEMPORAL_NAMESPACE
-              value: "FILL-ME-IN"
+              value: "FILL_ME_IN"
             - name: TEMPORAL_TASKQUEUE
-              value: "FILL-ME-IN"
+              value: "FILL_ME_IN"
             - name: VCENTER_INSECURE
               value: "false"
             - name: VCENTER_URL
-              value: "FILL-ME-IN"
+              value: "FILL_ME_IN"
             - name: DEBUG
               value: "true"
             - name: VCENTER_SECRET_PATH
@@ -41,7 +41,7 @@ spec:
               memory: 512Mi
           volumeMounts:
             - name: credentials
-              mountPath: /var/bindings/vsphere
+              mountPath: /var/bindings/vsphere # this is the default path
               readOnly: true
       volumes:
         - name: credentials
