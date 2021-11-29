@@ -1,5 +1,10 @@
 # vSphere Preemption
 
+[![Tests](https://github.com/embano1/vsphere-preemption/actions/workflows/unit-tests.yaml/badge.svg)](https://github.com/embano1/vsphere-preemption/actions/workflows/unit-tests.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/embano1/vsphere-preemption)](https://goreportcard.com/report/github.com/embano1/vsphere-preemption)
+[![Latest Release](https://img.shields.io/github/release/embano1/vsphere-preemption.svg?logo=github&style=flat-square)](https://github.com/embano1/vsphere-preemption/releases/latest)
+[![go.mod Go version](https://img.shields.io/github/go-mod/go-version/embano1/vsphere-preemption)](https://github.com/embano1/vsphere-preemption)
+
 Prototype to demonstrate **preemption of specific virtual machines** (VMs) in
 vSphere based on a custom preemption workflow developed and executed by the
 Temporal [Workflow Engine](https://temporal.io/). 
