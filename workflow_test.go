@@ -245,7 +245,7 @@ func (s *UnitTestSuite) Test_Workflow() {
 			case <-ctx.Done():
 				s.FailNow("context cancelled before receiving event")
 			case e := <-recvCh:
-				logger.Sugar().Debugw("received event", zap.String("event", e.String()))
+				logger.Debug("received event", zap.String("event", e.String()))
 				atomic.AddInt32(&received, 1)
 				return
 			}

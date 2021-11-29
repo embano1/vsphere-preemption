@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 
-	preemption "github.com/embano1/vsphere-preemption"
 	"github.com/kelseyhightower/envconfig"
 	sdk "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
 	"knative.dev/pkg/logging"
+
+	preemption "github.com/embano1/vsphere-preemption"
 )
 
 var (
