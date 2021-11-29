@@ -1,0 +1,39 @@
+---
+builds:
+  - id: cli
+    goos: &goos-defs
+      - linux
+      - darwin
+      - windows
+    goarch: &goarch-defs
+      - amd64
+      # - arm
+      # - arm64
+    env:
+      - CGO_ENABLED=0
+    tags:
+      - netgo
+    binary: preemptctl
+    ldflags:
+      - "-X github.com/embano1/vsphere-preemption/cli.buildCommit={{.ShortCommit}} -X github.com/embano1/vsphere-preemption/cli.buildTag={{.Version}}"
+    main: ./cmd/preemptctl
+
+archives:
+  - id: cli
+    builds:
+      - cli
+    name_template: "preemptctl_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    replacements: &replacements
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+    format_overrides:
+      - goos: windows
+        format: zip
+  
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+checksum:
+  name_template: "checksums.txt"
