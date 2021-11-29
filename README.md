@@ -51,7 +51,7 @@ current vSphere primitives, i.e. shares, reservations and limits.
 ## The Preemption Workflow
 
 The [workflow](workflow.go) is divided into several activities, executed by a
-custom Temporal [`worker`](worker/main.go):
+custom Temporal [`worker`](cmd/worker/main.go):
 
 1) Identify `preemptible` VMs (based on vSphere tags)
 1) Power off the identified VMs; soft or hard, depending on `CRITICALITY` (1)

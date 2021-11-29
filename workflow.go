@@ -1,6 +1,8 @@
 package preemption
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	ce "github.com/cloudevents/sdk-go/v2"
@@ -16,8 +18,9 @@ const (
 	CriticalityMedium Criticality = "MEDIUM"
 	CriticalityHigh   Criticality = "HIGH"
 
-	WorkflowName  = "PreemptVMsWorkflow"
-	SignalChannel = "PreemptVMsChan"
+	WorkflowName      = "PreemptVMsWorkflow"
+	SignalChannel     = "PreemptVMsChan"
+	WorkFlowQueryType = "current_state"
 
 	minTimeBetweenRuns = time.Minute // prevent multiple workflow executions within this window
 )
@@ -33,23 +36,54 @@ var defaultRetryPolicy = temporal.RetryPolicy{
 type WorkflowRequest struct {
 	Tag         string      `json:"tag"` // tag identifying preemptible VMs
 	Criticality Criticality `json:"criticality"`
-	Event       ce.Event    `json:"event"`   // AlarmStatusChangedEvent
+	Event       ce.Event    `json:"event"`   // e.g. AlarmStatusChangedEvent
 	ReplyTo     string      `json:"replyTo"` // empty if no cloudevent response wanted
 }
 
 type WorkflowResponse struct {
-	LastPreemption  time.Time                      `json:"lastPreemption"`  // last run before workflow stopped
-	VirtualMachines []types.ManagedObjectReference `json:"virtualMachines"` // list of VMs powered off by workflow from last run
+	WorkflowID      string                         `json:"workflowID"`
+	RunID           string                         `json:"workflowRunID"`
+	WorkflowName    string                         `json:"workflowName"`
+	LastPreemption  time.Time                      `json:"lastPreemptionTime"`
+	VirtualMachines []types.ManagedObjectReference `json:"virtualMachines"`
+	Tag             string                         `json:"tag"`
+	Criticality     Criticality                    `json:"criticality"`
+	Event           ce.Event                       `json:"event"`
+	ReplyTo         string                         `json:"replyTo"`
+}
+
+func (res *WorkflowResponse) getCurrentState() (string, error) {
+	b, err := json.Marshal(res)
+	if err != nil {
+		return "", fmt.Errorf("marshal JSON workflow response: %w", err)
+	}
+	return string(b), nil
 }
 
 // PreemptVMsWorkflow preempts VMs
-func PreemptVMsWorkflow(ctx workflow.Context) (WorkflowResponse, error) {
+func PreemptVMsWorkflow(ctx workflow.Context) (*WorkflowResponse, error) {
 	var (
 		lastRun time.Time
-		res     WorkflowResponse
 	)
 
+	info := workflow.GetInfo(ctx)
+	res := &WorkflowResponse{
+		WorkflowID:   info.WorkflowExecution.ID,
+		RunID:        info.WorkflowExecution.RunID,
+		WorkflowName: info.WorkflowType.Name,
+		Event:        ce.NewEvent(),
+	}
+
 	logger := workflow.GetLogger(ctx)
+
+	err := workflow.SetQueryHandler(ctx, WorkFlowQueryType, func() (string, error) {
+		logger.Debug("received query", "queryType", WorkFlowQueryType)
+		return res.getCurrentState()
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	sigCh := workflow.GetSignalChannel(ctx, SignalChannel)
 
 	for ctx.Err() == nil {
@@ -64,9 +98,28 @@ func PreemptVMsWorkflow(ctx workflow.Context) (WorkflowResponse, error) {
 
 		// workflow handling
 		sel.AddReceive(sigCh, func(c workflow.ReceiveChannel, _ bool) {
-			var req WorkflowRequest
+			var (
+				req         WorkflowRequest
+				vc          *Client // vcenter client will be injected
+				preemptible []types.ManagedObjectReference
+				preempted   []types.ManagedObjectReference
+			)
+
 			c.Receive(ctx, &req)
 			logger.Debug("received signal", "signal", req)
+
+			// update workflow response stats
+			defer func() {
+				lastRun = workflow.Now(ctx)
+
+				// 	persist last run information in case workflow is stopped/canceled
+				res.LastPreemption = lastRun
+				res.VirtualMachines = preempted
+				res.Criticality = req.Criticality
+				res.Tag = req.Tag
+				res.Event = req.Event
+				res.ReplyTo = req.ReplyTo
+			}()
 
 			now := workflow.Now(ctx)
 			// don't run if still within window
@@ -91,12 +144,6 @@ func PreemptVMsWorkflow(ctx workflow.Context) (WorkflowResponse, error) {
 				RetryPolicy:         &defaultRetryPolicy,
 			}
 			ctx = workflow.WithActivityOptions(ctx, options)
-
-			var (
-				vc          *Client // vcenter client will be injected
-				preemptible []types.ManagedObjectReference
-				preempted   []types.ManagedObjectReference
-			)
 
 			logger.Debug("searching for preemptible virtual machines")
 			if err := workflow.ExecuteActivity(ctx, vc.GetPreemptibleVMs, req.Tag).Get(ctx, &preemptible); err != nil {
@@ -145,13 +192,6 @@ func PreemptVMsWorkflow(ctx workflow.Context) (WorkflowResponse, error) {
 				logger.Error("send cloudevent", "error", err)
 				return
 			}
-
-			// only set lastRun if workflow execution was successful
-			lastRun = workflow.Now(ctx)
-
-			// 	persist last run information in case workflow is stopped/canceled
-			res.LastPreemption = lastRun
-			res.VirtualMachines = preempted
 		})
 
 		// blocks on workflow ctx and signal chan

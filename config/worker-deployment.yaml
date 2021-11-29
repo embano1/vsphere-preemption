@@ -15,7 +15,7 @@ spec:
         app: vsphere-preemption-prototype
     spec:
       containers:
-        - image: ko://github.com/embano1/vsphere-preemption/worker
+        - image: ko://github.com/embano1/vsphere-preemption/cmd/worker
           name: worker
           env:
             - name: TEMPORAL_URL
