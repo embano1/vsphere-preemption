@@ -41,6 +41,13 @@ jobs:
           echo "KO_COMMIT=$(echo -n $GITHUB_SHA | cut -c -8)" >> $GITHUB_ENV
           echo "KO_TAG=$(basename "${{ github.ref }}")" >> $GITHUB_ENV
 
+      - name: Create binaries
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist --skip-publish
+
       - name: Build and Publish Images, produce Release Artifact
         run: |
           ko resolve --tags ${KO_TAG},${KO_COMMIT},latest -BRf config/ > release.yaml
@@ -49,4 +56,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create ${KO_TAG} release.yaml
+          gh release create ${KO_TAG} release.yaml ./dist/*
