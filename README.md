@@ -76,8 +76,10 @@ See [Why a Workflow Engine?](#why-a-workflow-engine) for more details.
 [`signals`](https://docs.temporal.io/docs/concepts/signals/) to send workflow
 requests to the `worker`. That means, once a workflow is started it will block
 on more signals and **will not terminate** unless explicitly cancelled by an
-external actor. For example, the further below mentioned mentioned VEBA example
-`kn-go-preemption` does this when an alert severity level is dropping.
+external actor or when passing a timeout in the workflow request. For example,
+the further below mentioned mentioned VEBA example `kn-go-preemption` sets a
+timeout of 24h when triggering a workflow. The function also cancels a running
+workflow when the configured vSphere alert severity level is dropping.
 
 The benefit of `signals` instead of creating distinct workflows on each request
 is that the overall workflow keeps running and state can be shared between
@@ -120,9 +122,14 @@ scalable workflow engine.
   tags, power off virtual machines and create/write custom attributes
 - An external actor, e.g. a function, to (periodically) trigger the workflow (1)
 
-(1) Deploy this example from the VEBA project or see its code for details how to
-trigger the workflow:
-[kn-go-preemption](https://github.com/vmware-samples/vcenter-event-broker-appliance/tree/development/examples/knative/go/kn-go-preemption).
+### Note on External Actors
+
+An external actor is simply a script or program which triggers the defined preemption workflow. This project currently provides two actors:
+
+- `preemptctl` CLI [README](./cmd/preemptctl/README.md) for **manual** (or
+  cron-based) execution without
+- [`kn-go-preemption`]((https://github.com/vmware-samples/vcenter-event-broker-appliance/tree/development/examples/knative/go/kn-go-preemption).)
+  function for a complete **event-driven** approach based on vSphere alarms
 
 ## Deployment
 
@@ -150,9 +157,9 @@ value in JSON format based on a (hardcoded) key
 `com.vmware.workflows.vsphere.preemption` is updated to provide details on which
 workflow/event caused the power operation.
 
-⚠️ This custom attribute must be created upfront, otherwise the annotation step
-will fail. This can be done through the vCenter UI or programmatically, e.g.
-using `govc`:
+⚠️ This custom attribute will be created by the worker if it does not exist. An
+administrator can also do this manually through the vCenter UI or
+programmatically, e.g. using `govc`:
 
 ```console
 govc fields.add -type VirtualMachine com.vmware.workflows.vsphere.preemption
