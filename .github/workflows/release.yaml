@@ -57,4 +57,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create ${KO_TAG} release.yaml ./dist/*
+          gh release create ${KO_TAG} release.yaml ./dist/**/*
+

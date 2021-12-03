@@ -13,7 +13,7 @@ builds:
       - CGO_ENABLED=0
     tags:
       - netgo
-    binary: preemptctl
+    binary: "preemptctl_{{ .Os }}_{{ .Arch }}"
     ldflags:
       - "-X github.com/embano1/vsphere-preemption/cli.buildCommit={{.ShortCommit}} -X github.com/embano1/vsphere-preemption/cli.buildTag={{.Version}}"
     main: ./cmd/preemptctl
