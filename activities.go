@@ -236,6 +236,7 @@ func (c *Client) AnnotateVms(ctx context.Context, refs []types.ManagedObjectRefe
 			return temporal.NewNonRetryableApplicationError("find custom field", errVSphere, err, "key", customField)
 		}
 
+		logger.Debug("custom field not found, creating field", "key", customField)
 		def, fieldErr := om.Add(ctx, customField, "VirtualMachine", nil, nil)
 		if fieldErr != nil {
 			return temporal.NewNonRetryableApplicationError("create custom field", errVSphere, fieldErr, "key", customField)

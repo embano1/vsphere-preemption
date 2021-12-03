@@ -1,0 +1,109 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: ["main", "master"]
+
+  pull_request:
+    branches: ["main", "master", "release-*"]
+
+jobs:
+  e2e:
+    name: Run e2e Tests
+    strategy:
+      matrix:
+        go-version: ["1.17"]
+        platform: ["ubuntu-latest"]
+    runs-on: ${{ matrix.platform }}
+    env:
+      KO_DOCKER_REPO: kind.local
+      KIND_CLUSTER_NAME: e2e
+      E2E_NAMESPACE: vsphere-preemption-e2e
+      TEMPORAL_NAMESPACE: vsphere-preemption
+    timeout-minutes: 30
+    concurrency: 
+      group: ${{ github.head_ref }}
+      cancel-in-progress: true
+
+    steps:
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+      id: go
+
+    - name: Setup ko
+      uses: imjasonh/setup-ko@v0.4 # will install latest ko version
+
+    - name: Check out Code onto GOPATH
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Setup KinD Cluster
+      env:
+        KIND_VERSION: v0.11.1
+      run: |
+        set -x
+        curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-amd64
+        chmod +x ./kind
+        sudo mv kind /usr/local/bin
+
+        # KinD configuration.
+        cat > kind.yaml <<EOF
+        apiVersion: kind.x-k8s.io/v1alpha4
+        kind: Cluster
+        nodes:
+        - role: control-plane
+        - role: worker
+        EOF
+
+        # Create a cluster!
+        kind create cluster --config kind.yaml --wait 3m --name ${KIND_CLUSTER_NAME}
+
+    - name: Get short COMMIT and TAG (used by ko)
+      run: |
+        echo "KO_COMMIT=$(echo -n $GITHUB_SHA | cut -c -8)" >> $GITHUB_ENV
+        echo "KO_TAG=$(basename "${{ github.ref }}")" >> $GITHUB_ENV
+
+    - name: Build ko images
+      run: |
+        echo "WORKER_IMAGE=$(ko publish -B github.com/embano1/vsphere-preemption/cmd/worker)" >> $GITHUB_ENV
+        echo "CLI_IMAGE=$(ko publish -B github.com/embano1/vsphere-preemption/cmd/preemptctl)" >> $GITHUB_ENV
+        echo "TAG_VM_IMAGE=$(ko publish -B github.com/embano1/vsphere-preemption/test/images/tagvms)" >> $GITHUB_ENV
+        echo "GET_VM_IMAGE=$(ko publish -B github.com/embano1/vsphere-preemption/test/images/getvms)" >> $GITHUB_ENV
+
+    - name: Setup Temporal
+      env:
+        TEMPORAL_CHART_URL: https://github.com/temporalio/helm-charts
+      run: |
+        git clone ${TEMPORAL_CHART_URL}
+        pushd helm-charts
+        helm dependencies update
+        helm install \
+        --set server.replicaCount=1 \
+        --set cassandra.config.cluster_size=1 \
+        --set prometheus.enabled=false \
+        --set grafana.enabled=false \
+        --set elasticsearch.enabled=false \
+        temporaltest . --timeout 15m
+
+        # wait until init completes
+        kubectl wait --timeout=5m --for=condition=Available deploy/temporaltest-frontend
+        
+        # create Temporal namespace
+        kubectl exec -it services/temporaltest-admintools -- tctl --ns ${TEMPORAL_NAMESPACE} namespace register
+
+        # change back to src repo
+        popd
+
+    - name: "Run E2E Tests"
+      env:
+        TESTFLAGS: "-timeout 10m -v -tags=e2e -count 1 -race"
+      run: |
+        go test ${TESTFLAGS} ./test/e2e
+
+    - name: "Debug"
+      if: ${{ always() }}
+      run: |
+        kubectl get pods --all-namespaces
