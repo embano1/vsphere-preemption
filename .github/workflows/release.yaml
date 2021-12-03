@@ -48,8 +48,9 @@ jobs:
           version: latest
           args: release --rm-dist --skip-publish
 
-      - name: Build and Publish Images, produce Release Artifact
+      - name: Build and Publish Worker Image
         run: |
+          # build, push and create release YAML
           ko resolve --tags ${KO_TAG},${KO_COMMIT},latest -BRf config/ > release.yaml
       
       - name: Create Github Release and upload assets
