@@ -84,6 +84,8 @@ jobs:
 
         # wait until init completes
         kubectl wait --timeout=5m --for=condition=Available deploy/temporaltest-frontend
+        kubectl wait --timeout=5m --for=condition=Available deploy/temporaltest-matching
+        kubectl wait --timeout=5m --for=condition=Available deploy/temporaltest-worker
         
         # create Temporal namespace
         kubectl exec -it services/temporaltest-admintools -- tctl --ns ${TEMPORAL_NAMESPACE} namespace register
